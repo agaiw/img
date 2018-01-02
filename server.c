@@ -11,10 +11,12 @@
 
 #include "handlesockets.h"
 
-#define MAX_MESSAGE 4096
+#define MAX_MESSAGE 50000 // was 4096
 #define MAX_CLIENTS 1024
 #define MIN_PORT 1024
 #define MAX_PORT 49151
+#define HEADER_SIZE 9
+#define FILE_SIZE 18486
 
 int connectedClients[MAX_CLIENTS];
 
@@ -69,16 +71,21 @@ int main(int argc, char* argv[]) {
         } 
         else {
           // Pending data from already connected client
-          char* message = (char*)malloc(MAX_MESSAGE * sizeof(char));
+         char* message = (char*)malloc((FILE_SIZE + 32 + 9) * sizeof(char));
           strcpy(message, "");
-          int status =  readFromClient(message, MAX_MESSAGE, i);
+
+          int img = 0;
+          int status = readFromClient(message, FILE_SIZE + 32 + 9, i);
           time_t ct;
           time(&ct);
           printf("Time: %sMessage: %s\n", ctime(&ct), message);
           if (status > 0) {
-            if (strncmp(message, "MMMM", 4) == 0) {
+            if ((strncmp(message, "MMMM", 4) == 0) || strncmp(message, "IIII", 4) == 0) {
               // Zero-length payload in case of Ack message
-              char* response = "AAAA0000";
+              if (strncmp(message, "IIII", 4) == 0) {
+                img = 1;
+              }
+              char* response = "AAAA00000";
               write(i, response, strlen(response));
             }
             else if (strncmp(message, "EEEE", 4) == 0) {
@@ -87,10 +94,16 @@ int main(int argc, char* argv[]) {
               FD_CLR(i, &active_fds);
               connectedClients[i] = 0;
             }
+            else {printf("strange message received\n");}
             for (int j = 0; j < FD_SETSIZE; ++j) {
               // propagation of client message to other clients
               if (connectedClients[j] == 1) {
-                write(j, message, strlen(message));
+                if (img == 0) {
+                  write(j, message, strlen(message));
+                }
+                else {
+                  write(j, message, HEADER_SIZE + 32 + FILE_SIZE);
+                }
               }
             }
           }

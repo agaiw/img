@@ -35,32 +35,32 @@ void readBitmapProperties(char* buffer, struct bitmapS* bitmap) {
 
 }
 
-void encodeMessage(char* in_msg) {
-  char* in_img = loadFile(INPUT_FILE);
+char* encodeMessage(char* in_msg) {
+  char* img_buffer = loadFile(INPUT_FILE);
   struct bitmapS b;
-  readBitmapProperties(in_img, &b);
+  readBitmapProperties(img_buffer, &b);
   char* bmp_p = b.pixelArray_p;
-  for (int i = 0; i < strlen(in_msg); ++i) {
+  for (int i = 0; i <= strlen(in_msg); ++i) {
         for (int j = 7; j >= 0; --j) {
           char bit = (in_msg[i] & (1 << j) ? 1 : 0);
           *bmp_p = *bmp_p & 0xFE | bit;
           bmp_p = bmp_p + 3;
         }
-    FILE* pFile = fopen(OUTPUT_FILE, "wb+");
-    fwrite(b.file_p, sizeof(char), 49206, pFile);
-    fclose(pFile);
   }
-  return;
+  return img_buffer;
 }
 
-void decodeMessage(char* out_msg) {
-  char* out_img = loadFile(OUTPUT_FILE);
+void decodeMessage(char* out_msg, char* payload) {
   struct bitmapS b;
-  readBitmapProperties(out_img, &b);
+  payload += 32;
+  for (int i = 0; i < 100; i++) {
+  }
+  readBitmapProperties(payload, &b);
   char* bmp_p = b.pixelArray_p;
   char character;
   int counter = 0;
-  while(1) {  
+
+  while(1) { 
     character = 0;
     for (int j = 7; j >= 0; --j) {
         char bit = *bmp_p & 0x1;
@@ -69,27 +69,10 @@ void decodeMessage(char* out_msg) {
       }
     out_msg[counter] = character;
     if (character == 0) {
-      out_msg[counter] = '\0';
+      //out_msg[counter] = '\0';
       break;
     }
   ++counter;
   };
 
 }
-
-
-int main(int argc, char* argv[]) {
-
-  char in_msg[MSG_LIMIT] = "message for my enemy";
-
-  printf("before encoding: %s\n", in_msg);
-
-  char out_msg[MSG_LIMIT] = "";
-
-  encodeMessage(in_msg);
-  decodeMessage(out_msg);
-
-  printf("after decoding: %s\n", out_msg);
-}
-
-

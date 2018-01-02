@@ -3,8 +3,8 @@ CFLAGS=-Wpedantic -Werror -pthread
 
 all: client server
 
-client: client.o
-	$(CC) $(CFLAGS) -g -o client client.o
+client: client.o image.o
+	$(CC) $(CFLAGS) -g -o client client.o image.o
 
 server: server.o handlesockets.o
 	$(CC) $(CFLAGS) -g -o server server.o handlesockets.o

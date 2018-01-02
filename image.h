@@ -2,7 +2,7 @@
 #define _HANDLESOCKETS_H_
 
 #define MSG_LIMIT 1000
-#define INPUT_FILE "bmps/tru.bmp"
+#define INPUT_FILE "bmps/cat.bmp"
 #define OUTPUT_FILE "bmps/out.bmp"
 
 /**
@@ -57,9 +57,9 @@ void readBitmapProperties(char* buffer, struct bitmapS* bitmap);
 *
 * Parameters:  [in] in_msg - message to be encoded in bitmap
 *
-* Returns:     Void
+* Returns:     Pointer to encoded image
 **/
-void encodeMessage(char* in_msg);
+char* encodeMessage(char* in_msg);
 
 /**
 * Function:    decodeMessage
@@ -67,10 +67,11 @@ void encodeMessage(char* in_msg);
 * Description: Decodes message encrypted in least significant bit
 *              of red color byte in a bitmap image
 *
-* Parameters:  [out_msg] - decoded message
+* Parameters:  [in/out] out_msg - decoded message
+*              [in] payload - received data stream
 *
 * Returns:     Void      
 **/
-void decodeMessage(char* out_msg);
+void decodeMessage(char* out_msg, char* payload);
 
 #endif

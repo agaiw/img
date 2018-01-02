@@ -8,14 +8,15 @@
 #include <netinet/in.h>
 #include <pthread.h>
 #include <time.h>
+#include "image.h"
 
-#define MAX_RESPONSE 4096
 #define MAX_NICK 16
-#define HEADER_SIZE 8
-#define MAX_PAYLOAD 992
-#define MAX_MESSAGE 1000
+#define HEADER_SIZE 9
+#define MAX_PAYLOAD 49900 // was 992
+#define MAX_MESSAGE 50000 // was 1000
 #define MAX_TXT 950
 #define TIME_SIZE 24
+#define FILE_SIZE 18486 // 49206
 
 /**
 * Function:     receiveLoop
@@ -96,7 +97,7 @@ int main(int argc, char* argv[]) {
     return 1;
   }
   printf("Connection established. Make yourself comfortable and start chatting.\n");
-  printf("To quit just type 'exit'.\n");
+  printf("To enter encrypted message, type 'secret'. To quit, just type 'exit'.\n");
 
   pthread_t* threads = malloc(sizeof(pthread_t) * 2);
 
@@ -121,7 +122,7 @@ int main(int argc, char* argv[]) {
 void* receiveLoop(void* fd) {
   int sock_fd = *((int*)fd);
   char header[HEADER_SIZE];
-  char payload[MAX_PAYLOAD];
+  char* payload = malloc(sizeof(char) * MAX_PAYLOAD);
   while (1) {
     int readBytes;
     memset(header, 0, HEADER_SIZE);
@@ -130,9 +131,10 @@ void* receiveLoop(void* fd) {
 
     if (readBytes <= 0) {
       close(sock_fd);
-      printf("Lost connection to server. Exiting...\n");
+      perror("Lost connection to server. Exiting...\n");
       exit(EXIT_FAILURE);
     }
+
     if (strncmp(header, "AAAA", 4) == 0) {
       // inform sendLoop that ack has been received
       if (pthread_mutex_lock(&ackLock) != 0) {
@@ -149,11 +151,25 @@ void* receiveLoop(void* fd) {
       }
     }
     else if (strncmp(header, "MMMM", 4) == 0 || strncmp(header, "EEEE", 4) == 0) {
-      char len[5];
-      strncpy(len, header+4, 4);
+      char len[6];
+      strncpy(len, header+4, 5);
       int msgLen = atoi(len);
       readBytes = read(sock_fd, payload, msgLen);
       printf("%s\n", payload);
+    }
+    else if (strncmp(header, "IIII", 4) == 0) {
+      char len[6];
+      strncpy(len, header+4, 5);
+      int msgLen = atoi(len);
+
+      readBytes = read(sock_fd, payload, msgLen);
+      char* message = malloc(sizeof(char) * MAX_TXT);
+      decodeMessage(message, payload);
+      printf("%.32s%s", payload, message);
+    }
+    else {
+      perror("unknown message received");
+      exit(EXIT_FAILURE);
     }
   }
 }
@@ -164,7 +180,10 @@ void* sendLoop(void* fd) {
   while (1) {
     char* msg;
     int status = prepareMsg(&msg, &hello);
-    write(sock_fd, msg, strlen(msg));
+    int msgLen = 0;
+    if (status == 1) {msgLen = FILE_SIZE + 32;}
+    else {msgLen = strlen(msg);}
+    write(sock_fd, msg, 9 + msgLen);
     free(msg);
     if (status == -1) {
       close(sock_fd);
@@ -188,7 +207,7 @@ void* sendLoop(void* fd) {
 
 int prepareMsg(char** msg, int* hello) {
 
-  char text[MAX_TXT];
+  char* text = malloc(sizeof(char) * MAX_MESSAGE);
   int ex = 0;
   if (*hello != 1) {
     fgets(text, MAX_TXT - 1, stdin);
@@ -197,6 +216,19 @@ int prepareMsg(char** msg, int* hello) {
     if (strcmp(text, "exit\n") == 0) {
       ex = -1;
       strcpy(text, "*** User has left the chat ***\n");
+    }
+    if (strcmp(text, "secret\n") == 0) {
+      ex = 1;
+      printf("Please enter a message to encrypt.\n");
+      strcpy(text, "SECRET MESSAGE: ");
+      char secret_text[MAX_TXT];
+      fgets(secret_text, MAX_TXT - 17, stdin);
+      strncat(text, secret_text, MAX_TXT - 17);
+      char* img_buffer = encodeMessage(text);
+      *text = '\0';
+      memcpy(text, img_buffer, FILE_SIZE);
+      printf("\33[1A\33[2K");
+      printf("\33[1A\33[2K");
     }
   }
   else {
@@ -208,6 +240,9 @@ int prepareMsg(char** msg, int* hello) {
   if (ex == 0) {
     strcpy(*msg, "MMMM");
   }
+  else if (ex == 1) {
+    strcpy(*msg, "IIII");
+  }
   else {
     strcpy(*msg, "EEEE");
   }
@@ -218,23 +253,41 @@ int prepareMsg(char** msg, int* hello) {
   strcat(payload, " ");
   strcat(payload, nick);
   strcat(payload, ": ");
-  (strlen(text) - 1 < MAX_TXT) ?
-   strncat(payload, text, strlen(text) - 1) : 
-   strncat(payload, text, MAX_TXT);
-  int len = (int)strlen(payload);
-  char msgLen[5];
+
+  int len;
+  if (ex == 1) {
+    len = FILE_SIZE + 32;
+    char* payload_img_p = payload + 32;
+    memcpy(payload_img_p, text, len);
+  }
+  else {
+    (strlen(text) - 1 < MAX_TXT) ?
+    strncat(payload, text, strlen(text) - 1) : 
+    strncat(payload, text, MAX_TXT);
+    len = (int)strlen(payload);
+  }
+
+  char msgLen[6];
   sprintf(msgLen, "%d", len);
   if (len < 10) {
-    strcat(*msg, "000");
+    strcat(*msg, "0000");
   }
   else if (len < 100) {
-    strcat(*msg, "00");
+    strcat(*msg, "000");
   }
   else if (len < 1000) {
+    strcat(*msg, "00");
+  }
+  else if (len < 10000) {
     strcat(*msg, "0");
   }
   strcat(*msg, msgLen);
-  strcat(*msg, payload);
+  if (ex == 1) {
+    memcpy(*msg + 9, payload, FILE_SIZE + 32);
+  } 
+  else {
+    strcat(*msg, payload);
+  }
   return ex;
 }
 
