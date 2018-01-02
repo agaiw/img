@@ -76,7 +76,7 @@ int main(int argc, char* argv[]) {
           time(&ct);
           printf("Time: %sMessage: %s\n", ctime(&ct), message);
           if (status > 0) {
-            if (strncmp(message, "MMMM", 4) == 0) {
+            if ((strncmp(message, "MMMM", 4) == 0) || strncmp(message, "IIII", 4) == 0) {
               // Zero-length payload in case of Ack message
               char* response = "AAAA0000";
               write(i, response, strlen(response));

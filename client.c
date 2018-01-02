@@ -96,7 +96,7 @@ int main(int argc, char* argv[]) {
     return 1;
   }
   printf("Connection established. Make yourself comfortable and start chatting.\n");
-  printf("To quit just type 'exit'.\n");
+  printf("To enter encrypted message, type 'CIPHER' in uppercase. To quit, just type 'exit'.\n");
 
   pthread_t* threads = malloc(sizeof(pthread_t) * 2);
 
@@ -155,6 +155,14 @@ void* receiveLoop(void* fd) {
       readBytes = read(sock_fd, payload, msgLen);
       printf("%s\n", payload);
     }
+    else if (strncmp(header, "IIII", 4) == 0) {
+      char len[5];
+      strncpy(len, header+4, 4);
+      int msgLen = atoi(len);
+      readBytes = read(sock_fd, payload, msgLen);
+      printf("Secret message received: \n");
+      printf("%s\n", payload);
+    }
   }
 }
 
@@ -198,6 +206,13 @@ int prepareMsg(char** msg, int* hello) {
       ex = -1;
       strcpy(text, "*** User has left the chat ***\n");
     }
+    if (strcmp(text, "CIPHER\n") == 0) {
+      ex = 1;
+      printf("Please enter a message to encrypt.\n");
+      fgets(text, MAX_TXT - 1, stdin);
+      // erase just printed message after writing it to 'text' buffer
+      printf("\33[1A\33[2K");
+    }
   }
   else {
     strcpy(text, "*** User has joined the chat ***\n");
@@ -207,6 +222,9 @@ int prepareMsg(char** msg, int* hello) {
   char* payload = malloc(MAX_PAYLOAD * sizeof(char));
   if (ex == 0) {
     strcpy(*msg, "MMMM");
+  }
+  else if (ex == 1) {
+    strcpy(*msg, "IIII");
   }
   else {
     strcpy(*msg, "EEEE");
