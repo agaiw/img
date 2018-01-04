@@ -165,12 +165,14 @@ void* receiveLoop(void* fd) {
       char* message = malloc(sizeof(char) * MAX_TXT);
       decodeMessage(message, payload, msgLen - MSG_IMG_SIZE);
       printf("%.*s%s", msgLen - MSG_IMG_SIZE, payload, message);
+      free(message);
     }
     else {
       perror("unknown message received");
       exit(EXIT_FAILURE);
     }
   }
+  free(payload);
 }
 
 void* sendLoop(void* fd) {
@@ -229,6 +231,7 @@ int prepareMsg(char** msg, int* hello) {
       memcpy(text, img_buffer, MSG_IMG_SIZE);
       printf("\33[1A\33[2K");
       printf("\33[1A\33[2K");
+      free(img_buffer);
     }
   }
   else {
@@ -288,6 +291,8 @@ int prepareMsg(char** msg, int* hello) {
   else {
     strcat(*msg, payload);
   }
+  free(payload);
+  free(text);
   return ex;
 }
 
