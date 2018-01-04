@@ -14,7 +14,7 @@
 #define HEADER_SIZE 9
 #define MAX_PAYLOAD 49900 // was 992
 #define MAX_MESSAGE 50000 // was 1000
-#define MAX_TXT 950
+#define MAX_TXT 1000  // 950
 #define TIME_SIZE 24
 #define FILE_SIZE 18486 // 49206
 

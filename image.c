@@ -1,7 +1,28 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 #include <string.h>
 #include "image.h"
+
+char* bmps[18] = {"bmps/bike.bmp",
+                 "bmps/bird.bmp",
+                 "bmps/butterfly.bmp",
+                 "bmps/car.bmp",
+                 "bmps/cat.bmp",
+                 "bmps/cows.bmp",
+                 "bmps/dog.bmp",
+                 "bmps/fish.bmp",
+                 "bmps/flowers.bmp",
+                 "bmps/food.bmp",
+                 "bmps/friends.bmp",
+                 "bmps/fundog.bmp",
+                 "bmps/guineapig.bmp",
+                 "bmps/jellyfish.bmp",
+                 "bmps/monkey.bmp",
+                 "bmps/muppets.bmp",
+                 "bmps/rhino.bmp",
+                 "bmps/turtle.bmp"};
+
 
 char* loadFile(char* filename) {
 
@@ -36,7 +57,10 @@ void readBitmapProperties(char* buffer, struct bitmapS* bitmap) {
 }
 
 char* encodeMessage(char* in_msg) {
-  char* img_buffer = loadFile(INPUT_FILE);
+  time_t t;
+  srand((unsigned) time(&t));
+  int bmp_index = rand() % 18;
+  char* img_buffer = loadFile(bmps[bmp_index]);
   struct bitmapS b;
   readBitmapProperties(img_buffer, &b);
   char* bmp_p = b.pixelArray_p;

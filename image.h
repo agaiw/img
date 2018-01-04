@@ -1,9 +1,8 @@
-#ifndef _HANDLESOCKETS_H_
-#define _HANDLESOCKETS_H_
+#ifndef _IMAGE_H_
+#define _IMAGE_H_
 
 #define MSG_LIMIT 1000
 #define INPUT_FILE "bmps/cat.bmp"
-#define OUTPUT_FILE "bmps/out.bmp"
 
 /**
 * Structure:   bitmapS
