@@ -13,6 +13,7 @@ Run client                  ./client <port> <nick>
 Example                     ./client 5100 agaiw
 
 Type message                <message>
+Type secret message         secret | press ENTER | <message>
 Quit client                 exit
 
 ===================================================================================
@@ -20,17 +21,18 @@ Quit client                 exit
 Chat protocol description
 
 
-MESSAGE ( up to 1000 chars) = HEADER (8 chars) + PAYLOAD (up to 992 chars)
+MESSAGE (up to 20000 chars) = HEADER (8 chars) + PAYLOAD (up to 19992 chars)
 
-HEADER = TYPE (4 chars) + PAYLOAD LENGTH (4 chars)
+HEADER (8 chars) = MESSAGE TYPE (3 chars) + MESSAGE LENGTH (5 chars)
 
 
 Supported header types
 
-MMMM = Message             Ordinary message, bidirectional. Hello message is also
-                           of type MMMM.
-AAAA = Acknowledgement     Acknowledgement sent from server to client in response
-                           to message of type MMMM.
-EEEE = Exit                Exit message, bidirectional.
+MSG = Message              Ordinary message, bidirectional. Hello message is also
+                           of type MSG.
+IMG = Image                Message containing bitmap image, bidirectional.
+ACK = Acknowledgement      Acknowledgement sent from server to client in response
+                           to message of type MSG/IMG.
+EXT = Exit                 Exit message, bidirectional.
 
 ===================================================================================

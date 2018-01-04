@@ -68,9 +68,10 @@ char* encodeMessage(char* in_msg);
 *
 * Parameters:  [in/out] out_msg - decoded message
 *              [in] payload - received data stream
+*              [in] offset - bitmap offset in data stream
 *
 * Returns:     Void      
 **/
-void decodeMessage(char* out_msg, char* payload);
+void decodeMessage(char* out_msg, char* payload, int offset);
 
 #endif

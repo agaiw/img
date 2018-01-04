@@ -9,14 +9,18 @@
 #include <netinet/in.h>
 #include <time.h>
 
+#include "protocol.h" 
 #include "handlesockets.h"
 
-#define MAX_MESSAGE 50000 // was 4096
+
 #define MAX_CLIENTS 1024
 #define MIN_PORT 1024
 #define MAX_PORT 49151
-#define HEADER_SIZE 9
-#define FILE_SIZE 18486
+
+#define MSG_MAX_NICK 16 // nie protokol
+#define MSG_TIME_SIZE 24 // nie protokol
+#define MSG_IMG_SIZE 18486 //nie protokol
+#define MSG_SUBHEADER_SIZE 27 // nie protokol
 
 int connectedClients[MAX_CLIENTS];
 
@@ -71,24 +75,24 @@ int main(int argc, char* argv[]) {
         } 
         else {
           // Pending data from already connected client
-         char* message = (char*)malloc((FILE_SIZE + 32 + 9) * sizeof(char));
+         char* message = (char*)malloc((MSG_HEADER_SIZE + MSG_SUBHEADER_SIZE + MSG_MAX_NICK + MSG_IMG_SIZE) * sizeof(char));
           strcpy(message, "");
 
           int img = 0;
-          int status = readFromClient(message, FILE_SIZE + 32 + 9, i);
+          int status = readFromClient(message, MSG_HEADER_SIZE + MSG_SUBHEADER_SIZE + MSG_MAX_NICK + MSG_IMG_SIZE, i);
           time_t ct;
           time(&ct);
           printf("Time: %sMessage: %s\n", ctime(&ct), message);
           if (status > 0) {
-            if ((strncmp(message, "MMMM", 4) == 0) || strncmp(message, "IIII", 4) == 0) {
+            if ((strncmp(message, "MSG", MSG_TYPE_SIZE) == 0) || strncmp(message, "IMG", MSG_TYPE_SIZE) == 0) {
               // Zero-length payload in case of Ack message
-              if (strncmp(message, "IIII", 4) == 0) {
+              if (strncmp(message, "IMG", MSG_TYPE_SIZE) == 0) {
                 img = 1;
               }
-              char* response = "AAAA00000";
+              char* response = "ACK00000";
               write(i, response, strlen(response));
             }
-            else if (strncmp(message, "EEEE", 4) == 0) {
+            else if (strncmp(message, "EXT", MSG_TYPE_SIZE) == 0) {
               // clearing due to exit message sent by client
               close(i);
               FD_CLR(i, &active_fds);
@@ -98,12 +102,10 @@ int main(int argc, char* argv[]) {
             for (int j = 0; j < FD_SETSIZE; ++j) {
               // propagation of client message to other clients
               if (connectedClients[j] == 1) {
-                if (img == 0) {
-                  write(j, message, strlen(message));
-                }
-                else {
-                  write(j, message, HEADER_SIZE + 32 + FILE_SIZE);
-                }
+                char len[6];
+                strncpy(len, message + MSG_TYPE_SIZE, MSG_LEN_SIZE);
+                int msgLen = atoi(len);
+                write(j, message, MSG_HEADER_SIZE + msgLen);
               }
             }
           }

@@ -9,14 +9,13 @@
 #include <pthread.h>
 #include <time.h>
 #include "image.h"
+#include "protocol.h"
 
-#define MAX_NICK 16
-#define HEADER_SIZE 9
-#define MAX_PAYLOAD 49900 // was 992
-#define MAX_MESSAGE 50000 // was 1000
-#define MAX_TXT 1000  // 950
-#define TIME_SIZE 24
-#define FILE_SIZE 18486 // 49206
+#define MSG_MAX_NICK 16 // nie protokol
+#define MSG_TIME_SIZE 24 // nie protokol
+#define MSG_IMG_SIZE 18486 //nie protokol
+#define MSG_SUBHEADER_SIZE 27 // nie protokol
+
 
 /**
 * Function:     receiveLoop
@@ -71,12 +70,12 @@ int prepareMsg(char** msg, int* hello);
 pthread_mutex_t ackLock = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t ackCond = PTHREAD_COND_INITIALIZER;
 
-char nick[MAX_NICK];
+char nick[MSG_MAX_NICK];
 
 int main(int argc, char* argv[]) {
 
   int port = strtol(argv[1], NULL, 10);
-  strncpy(nick, argv[2], MAX_NICK - 1);
+  strncpy(nick, argv[2], MSG_MAX_NICK - 1);
   printf("Run as: %s\n", nick);
   struct sockaddr_in server;
   memset(&server, 0, sizeof(server));
@@ -121,13 +120,13 @@ int main(int argc, char* argv[]) {
 
 void* receiveLoop(void* fd) {
   int sock_fd = *((int*)fd);
-  char header[HEADER_SIZE];
+  char header[MSG_HEADER_SIZE];
   char* payload = malloc(sizeof(char) * MAX_PAYLOAD);
   while (1) {
     int readBytes;
-    memset(header, 0, HEADER_SIZE);
+    memset(header, 0, MSG_HEADER_SIZE);
     memset(payload, 0, MAX_PAYLOAD);
-    readBytes = read(sock_fd, header, HEADER_SIZE);
+    readBytes = read(sock_fd, header, MSG_HEADER_SIZE);
 
     if (readBytes <= 0) {
       close(sock_fd);
@@ -135,7 +134,7 @@ void* receiveLoop(void* fd) {
       exit(EXIT_FAILURE);
     }
 
-    if (strncmp(header, "AAAA", 4) == 0) {
+    if (strncmp(header, "ACK", MSG_TYPE_SIZE) == 0) {
       // inform sendLoop that ack has been received
       if (pthread_mutex_lock(&ackLock) != 0) {
         perror("receiveLoop ackLock lock");
@@ -150,22 +149,22 @@ void* receiveLoop(void* fd) {
         exit(EXIT_FAILURE);
       }
     }
-    else if (strncmp(header, "MMMM", 4) == 0 || strncmp(header, "EEEE", 4) == 0) {
+    else if (strncmp(header, "MSG", MSG_TYPE_SIZE) == 0 || strncmp(header, "EXT", MSG_TYPE_SIZE) == 0) {
       char len[6];
-      strncpy(len, header+4, 5);
+      strncpy(len, header + MSG_TYPE_SIZE, MSG_LEN_SIZE);
       int msgLen = atoi(len);
       readBytes = read(sock_fd, payload, msgLen);
       printf("%s\n", payload);
     }
-    else if (strncmp(header, "IIII", 4) == 0) {
+    else if (strncmp(header, "IMG", MSG_TYPE_SIZE) == 0) {
       char len[6];
-      strncpy(len, header+4, 5);
+      strncpy(len, header + MSG_TYPE_SIZE, MSG_LEN_SIZE);
       int msgLen = atoi(len);
 
       readBytes = read(sock_fd, payload, msgLen);
       char* message = malloc(sizeof(char) * MAX_TXT);
-      decodeMessage(message, payload);
-      printf("%.32s%s", payload, message);
+      decodeMessage(message, payload, msgLen - MSG_IMG_SIZE);
+      printf("%.*s%s", msgLen - MSG_IMG_SIZE, payload, message);
     }
     else {
       perror("unknown message received");
@@ -181,9 +180,9 @@ void* sendLoop(void* fd) {
     char* msg;
     int status = prepareMsg(&msg, &hello);
     int msgLen = 0;
-    if (status == 1) {msgLen = FILE_SIZE + 32;}
+    if (status == 1) { msgLen = MSG_SUBHEADER_SIZE + strlen(nick) + MSG_IMG_SIZE; }
     else {msgLen = strlen(msg);}
-    write(sock_fd, msg, 9 + msgLen);
+    write(sock_fd, msg, MSG_HEADER_SIZE + msgLen);
     free(msg);
     if (status == -1) {
       close(sock_fd);
@@ -227,7 +226,7 @@ int prepareMsg(char** msg, int* hello) {
       strncat(text, secret_text, MAX_TXT - 17);
       char* img_buffer = encodeMessage(text);
       *text = '\0';
-      memcpy(text, img_buffer, FILE_SIZE);
+      memcpy(text, img_buffer, MSG_IMG_SIZE);
       printf("\33[1A\33[2K");
       printf("\33[1A\33[2K");
     }
@@ -239,26 +238,26 @@ int prepareMsg(char** msg, int* hello) {
   *msg = malloc(MAX_MESSAGE * sizeof(char));
   char* payload = malloc(MAX_PAYLOAD * sizeof(char));
   if (ex == 0) {
-    strcpy(*msg, "MMMM");
+    strcpy(*msg, "MSG");
   }
   else if (ex == 1) {
-    strcpy(*msg, "IIII");
+    strcpy(*msg, "IMG");
   }
   else {
-    strcpy(*msg, "EEEE");
+    strcpy(*msg, "EXT");
   }
   time_t ct;
   time(&ct);
   payload[0] = '\0';
-  strncat(payload, ctime(&ct), TIME_SIZE);
+  strncat(payload, ctime(&ct), MSG_TIME_SIZE);
   strcat(payload, " ");
   strcat(payload, nick);
   strcat(payload, ": ");
 
   int len;
   if (ex == 1) {
-    len = FILE_SIZE + 32;
-    char* payload_img_p = payload + 32;
+    len = MSG_SUBHEADER_SIZE + strlen(nick) + MSG_IMG_SIZE;
+    char* payload_img_p = payload + MSG_SUBHEADER_SIZE + strlen(nick);
     memcpy(payload_img_p, text, len);
   }
   else {
@@ -284,7 +283,7 @@ int prepareMsg(char** msg, int* hello) {
   }
   strcat(*msg, msgLen);
   if (ex == 1) {
-    memcpy(*msg + 9, payload, FILE_SIZE + 32);
+    memcpy(*msg + MSG_HEADER_SIZE, payload, MSG_SUBHEADER_SIZE + strlen(nick) + MSG_IMG_SIZE);
   } 
   else {
     strcat(*msg, payload);

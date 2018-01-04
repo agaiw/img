@@ -74,11 +74,9 @@ char* encodeMessage(char* in_msg) {
   return img_buffer;
 }
 
-void decodeMessage(char* out_msg, char* payload) {
+void decodeMessage(char* out_msg, char* payload, int offset) {
   struct bitmapS b;
-  payload += 32;
-  for (int i = 0; i < 100; i++) {
-  }
+  payload += offset;
   readBitmapProperties(payload, &b);
   char* bmp_p = b.pixelArray_p;
   char character;
@@ -92,10 +90,7 @@ void decodeMessage(char* out_msg, char* payload) {
         bmp_p += 3;
       }
     out_msg[counter] = character;
-    if (character == 0) {
-      //out_msg[counter] = '\0';
-      break;
-    }
+    if (character == 0) { break; }
   ++counter;
   };
 
