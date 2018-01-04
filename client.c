@@ -217,6 +217,7 @@ int prepareMsg(char** msg, int* hello) {
       ex = -1;
       strcpy(text, "*** User has left the chat ***\n");
     }
+
     if (strcmp(text, "secret\n") == 0) {
       ex = 1;
       printf("Please enter a message to encrypt.\n");
