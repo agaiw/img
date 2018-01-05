@@ -1,5 +1,12 @@
 ===================================================================================
 
+Functions:
+
+1. Sending/receiving text messages as plain text
+2. Sending/receiving secret messages encoded within randomly selected bitmap images
+
+===================================================================================
+
 Server usage:
 
 Run server                  ./server <port>                 
@@ -18,7 +25,7 @@ Quit client                 exit
 
 ===================================================================================
 
-Chat protocol description
+Chat protocol description:
 
 
 MESSAGE (up to 20000 chars) = HEADER (8 chars) + PAYLOAD (up to 19992 chars)
