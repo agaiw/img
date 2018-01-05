@@ -15,12 +15,14 @@
 #define MSG_TIME_SIZE 24
 #define MSG_IMG_SIZE 18486
 #define MSG_SUBHEADER_SIZE 27
+#define MAX_SECRET_TXT (MAX_TXT - 17)
 
 typedef enum {
   TEXT_MESSAGE = 0,
   IMAGE_MESSAGE = 1,
-  EXIT = 2
-} msgStatus;
+  HELLO_MESSAGE = 2,
+  EXIT_MESSAGE = 3
+} msgType;
 
 /**
 * Function:     receiveLoop
@@ -65,12 +67,11 @@ void* sendLoop(void* fd);
 *               (chat join/chat exit).
 *
 * Parameters:   [in/out] msg - address of a pointer to empty message
-*               [in] hello - boolean-type indication whether hello message shall
-*               be constructed
+*               [in/out] type - type of message being constructed
 *
-* Returns       int - exit status (-1 means that user has requested to exit the chat)
+* Returns       Void
 **/
-int prepareMsg(char** msg, int* hello);
+void prepareMsg(char** msg, msgType* type);
 
 pthread_mutex_t ackLock = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t ackCond = PTHREAD_COND_INITIALIZER;
@@ -181,13 +182,19 @@ void* receiveLoop(void* fd) {
 
 void* sendLoop(void* fd) {
   int sock_fd = *((int*)fd);
-  int hello = 1;
+
+  msgType type = HELLO_MESSAGE;
   while (1) {
     char* msg;
-    msgStatus status = prepareMsg(&msg, &hello);
+    prepareMsg(&msg, &type);
     int msgLen = 0;
-
-    switch(status) {
+    switch(type) {
+      case HELLO_MESSAGE:
+        msgLen = strlen(msg);
+        write(sock_fd, msg, MSG_HEADER_SIZE + msgLen);
+        free(msg);
+        type = TEXT_MESSAGE;
+        break;
       case TEXT_MESSAGE:
         msgLen = strlen(msg);
         write(sock_fd, msg, MSG_HEADER_SIZE + msgLen);
@@ -198,7 +205,7 @@ void* sendLoop(void* fd) {
         write(sock_fd, msg, MSG_HEADER_SIZE + msgLen);
         free(msg);
         break;
-      case EXIT:
+      case EXIT_MESSAGE:
         msgLen = strlen(msg);
         write(sock_fd, msg, MSG_HEADER_SIZE + msgLen);
         free(msg);
@@ -226,26 +233,42 @@ void* sendLoop(void* fd) {
   }
 }
 
-int prepareMsg(char** msg, int* hello) {
+void prepareMsg(char** message, msgType* type) {
+
+  /* Message structure: 
+
+  +--MESSAGE------------------------------------------------+
+  |  +--HEADER: 8---------------+  +--PAYLOAD-------------+ |
+  |  |  TYPE: 3   |  LEGTH: 5   |  |  SUBHEADER  |  TEXT  | |
+  |  +--------------------------+  +----------------------+ |
+  +---------------------------------------------------------+
+
+*/
+
+  /* Step 1: Gathering input from the user
+  /*         and generating TEXT part of PAYLOAD */
 
   char* text = malloc(sizeof(char) * MAX_MESSAGE);
-  int status = 0;
-  if (*hello != 1) {
+  if (*type == HELLO_MESSAGE) {
+    strcpy(text, "*** User has joined the chat ***\n");
+  }
+  else {
     fgets(text, MAX_TXT - 1, stdin);
+
     // erase just printed message after writing it to 'text' buffer
     printf("\33[1A\33[2K");
     if (strcmp(text, "exit\n") == 0) {
-      status = 2;
+      *type = EXIT_MESSAGE;
       strcpy(text, "*** User has left the chat ***\n");
     }
 
-    if (strcmp(text, "secret\n") == 0) {
-      status = 1;
+    else if (strcmp(text, "secret\n") == 0) {
+      *type = IMAGE_MESSAGE;
       printf("Please enter a message to encrypt.\n");
       strcpy(text, "SECRET MESSAGE: ");
-      char secret_text[MAX_TXT];
-      fgets(secret_text, MAX_TXT - 17, stdin);
-      strncat(text, secret_text, MAX_TXT - 17);
+      char secret_text[MAX_SECRET_TXT];
+      fgets(secret_text, MAX_SECRET_TXT, stdin);
+      strncat(text, secret_text, MAX_SECRET_TXT);
       char* img_buffer = encodeMessage(text);
       *text = '\0';
       memcpy(text, img_buffer, MSG_IMG_SIZE);
@@ -253,22 +276,14 @@ int prepareMsg(char** msg, int* hello) {
       printf("\33[1A\33[2K");
       free(img_buffer);
     }
+    else { *type = TEXT_MESSAGE; }
   }
-  else {
-    strcpy(text, "*** User has joined the chat ***\n");
-    *hello = 0;
-  }
-  *msg = malloc(MAX_MESSAGE * sizeof(char));
+
+
+  /* Step 2: Generating SUBHEADER 
+  /          and appending it to PAYLOAD */ 
+ 
   char* payload = malloc(MAX_PAYLOAD * sizeof(char));
-  if (status == 0) {
-    strcpy(*msg, "MSG");
-  }
-  else if (status == 1) {
-    strcpy(*msg, "IMG");
-  }
-  else {
-    strcpy(*msg, "EXT");
-  }
   time_t ct;
   time(&ct);
   payload[0] = '\0';
@@ -277,43 +292,67 @@ int prepareMsg(char** msg, int* hello) {
   strcat(payload, nick);
   strcat(payload, ": ");
 
-  int len;
-  if (status == 1) {
-    len = MSG_SUBHEADER_SIZE + strlen(nick) + MSG_IMG_SIZE;
+  /* Step 3: Appending TEXT to PAYLOAD */ 
+  int length;
+  if (*type == IMAGE_MESSAGE) {
+    length = MSG_SUBHEADER_SIZE + strlen(nick) + MSG_IMG_SIZE;
     char* payload_img_p = payload + MSG_SUBHEADER_SIZE + strlen(nick);
-    memcpy(payload_img_p, text, len);
+    memcpy(payload_img_p, text, length);
   }
   else {
     (strlen(text) - 1 < MAX_TXT) ?
     strncat(payload, text, strlen(text) - 1) : 
     strncat(payload, text, MAX_TXT);
-    len = (int)strlen(payload);
+    length = (int)strlen(payload);
+  }
+
+  /* Step 4: Generating MESSAGE buffer
+  /          and appending HEADER (= TYPE + LENGTH) to it */
+
+  *message = malloc(MAX_MESSAGE * sizeof(char));
+  switch (*type) {
+    case HELLO_MESSAGE:  //passthrough
+    case TEXT_MESSAGE:
+      strcpy(*message, "MSG");
+      break;
+    case IMAGE_MESSAGE:
+      strcpy(*message, "IMG");
+      break;
+    case EXIT_MESSAGE:
+      strcpy(*message, "EXT");
+      break;
   }
 
   char msgLen[6];
-  sprintf(msgLen, "%d", len);
-  if (len < 10) {
-    strcat(*msg, "0000");
+  sprintf(msgLen, "%d", length);
+  if (length < 10) {
+    strcat(*message, "0000");
   }
-  else if (len < 100) {
-    strcat(*msg, "000");
+  else if (length < 100) {
+    strcat(*message, "000");
   }
-  else if (len < 1000) {
-    strcat(*msg, "00");
+  else if (length < 1000) {
+    strcat(*message, "00");
   }
-  else if (len < 10000) {
-    strcat(*msg, "0");
+  else if (length < 10000) {
+    strcat(*message, "0");
   }
-  strcat(*msg, msgLen);
-  if (status == 1) {
-    memcpy(*msg + MSG_HEADER_SIZE, payload, MSG_SUBHEADER_SIZE + strlen(nick) + MSG_IMG_SIZE);
+  strcat(*message, msgLen);
+
+  /* Step 5: Appending PAYLOAD to MESSAGE */
+
+  if (*type == IMAGE_MESSAGE) {
+    memcpy(*message + MSG_HEADER_SIZE, payload, MSG_SUBHEADER_SIZE + strlen(nick) + MSG_IMG_SIZE);
   } 
   else {
-    strcat(*msg, payload);
+    strcat(*message, payload);
   }
+
+  /* Step 6: Cleanup */
+
   free(payload);
   free(text);
-  return status;
+  return;
 }
 
 
