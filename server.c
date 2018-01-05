@@ -12,15 +12,14 @@
 #include "protocol.h" 
 #include "handlesockets.h"
 
-
 #define MAX_CLIENTS 1024
 #define MIN_PORT 1024
 #define MAX_PORT 49151
 
-#define MSG_MAX_NICK 16 // nie protokol
-#define MSG_TIME_SIZE 24 // nie protokol
-#define MSG_IMG_SIZE 18486 //nie protokol
-#define MSG_SUBHEADER_SIZE 27 // nie protokol
+#define MSG_MAX_NICK 16
+#define MSG_TIME_SIZE 24
+#define MSG_IMG_SIZE 18486
+#define MSG_SUBHEADER_SIZE 27
 
 int connectedClients[MAX_CLIENTS];
 
