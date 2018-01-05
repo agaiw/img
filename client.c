@@ -11,11 +11,16 @@
 #include "image.h"
 #include "protocol.h"
 
-#define MSG_MAX_NICK 16 // nie protokol
-#define MSG_TIME_SIZE 24 // nie protokol
-#define MSG_IMG_SIZE 18486 //nie protokol
-#define MSG_SUBHEADER_SIZE 27 // nie protokol
+#define MSG_MAX_NICK 16
+#define MSG_TIME_SIZE 24
+#define MSG_IMG_SIZE 18486
+#define MSG_SUBHEADER_SIZE 27
 
+typedef enum {
+  TEXT_MESSAGE = 0,
+  IMAGE_MESSAGE = 1,
+  EXIT = 2
+} msgStatus;
 
 /**
 * Function:     receiveLoop
@@ -73,7 +78,6 @@ pthread_cond_t ackCond = PTHREAD_COND_INITIALIZER;
 char nick[MSG_MAX_NICK];
 
 int main(int argc, char* argv[]) {
-
   int port = strtol(argv[1], NULL, 10);
   strncpy(nick, argv[2], MSG_MAX_NICK - 1);
   printf("Run as: %s\n", nick);
@@ -83,8 +87,8 @@ int main(int argc, char* argv[]) {
   size_t server_len;
 
   if((sock_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-    printf("Failed to create socket.\n");
-    return 1;
+    perror("Failed to create socket.\n");
+    exit(EXIT_FAILURE);
   }
 
   server.sin_family = AF_INET;
@@ -92,8 +96,8 @@ int main(int argc, char* argv[]) {
   server.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 
   if(connect(sock_fd, (struct sockaddr*)&server, sizeof(server)) < 0) {
-    printf("Failed to establish a connection with server.\n");
-    return 1;
+    perror("Failed to establish a connection with server.\n");
+    exit(EXIT_FAILURE);
   }
   printf("Connection established. Make yourself comfortable and start chatting.\n");
   printf("To enter encrypted message, type 'secret'. To quit, just type 'exit'.\n");
@@ -180,18 +184,34 @@ void* sendLoop(void* fd) {
   int hello = 1;
   while (1) {
     char* msg;
-    int status = prepareMsg(&msg, &hello);
+    msgStatus status = prepareMsg(&msg, &hello);
     int msgLen = 0;
-    if (status == 1) { msgLen = MSG_SUBHEADER_SIZE + strlen(nick) + MSG_IMG_SIZE; }
-    else {msgLen = strlen(msg);}
-    write(sock_fd, msg, MSG_HEADER_SIZE + msgLen);
-    free(msg);
-    if (status == -1) {
-      close(sock_fd);
-      printf("Bye.\n");
-      exit(EXIT_SUCCESS);
-    }
-    if (pthread_mutex_lock(&ackLock) != 0) {
+
+    switch(status) {
+      case TEXT_MESSAGE:
+        msgLen = strlen(msg);
+        write(sock_fd, msg, MSG_HEADER_SIZE + msgLen);
+        free(msg);
+        break;
+      case IMAGE_MESSAGE:
+        msgLen = MSG_SUBHEADER_SIZE + strlen(nick) + MSG_IMG_SIZE;
+        write(sock_fd, msg, MSG_HEADER_SIZE + msgLen);
+        free(msg);
+        break;
+      case EXIT:
+        msgLen = strlen(msg);
+        write(sock_fd, msg, MSG_HEADER_SIZE + msgLen);
+        free(msg);
+        close(sock_fd);
+        printf("Bye.\n");
+        exit(EXIT_SUCCESS);
+        break;
+      default:
+        perror("unknown status from prepareMsg");
+        exit(EXIT_FAILURE);
+  }
+
+   if (pthread_mutex_lock(&ackLock) != 0) {
         perror("sendLoop ackLock lock");
         exit(EXIT_FAILURE);
     }
@@ -209,18 +229,18 @@ void* sendLoop(void* fd) {
 int prepareMsg(char** msg, int* hello) {
 
   char* text = malloc(sizeof(char) * MAX_MESSAGE);
-  int ex = 0;
+  int status = 0;
   if (*hello != 1) {
     fgets(text, MAX_TXT - 1, stdin);
     // erase just printed message after writing it to 'text' buffer
     printf("\33[1A\33[2K");
     if (strcmp(text, "exit\n") == 0) {
-      ex = -1;
+      status = 2;
       strcpy(text, "*** User has left the chat ***\n");
     }
 
     if (strcmp(text, "secret\n") == 0) {
-      ex = 1;
+      status = 1;
       printf("Please enter a message to encrypt.\n");
       strcpy(text, "SECRET MESSAGE: ");
       char secret_text[MAX_TXT];
@@ -240,10 +260,10 @@ int prepareMsg(char** msg, int* hello) {
   }
   *msg = malloc(MAX_MESSAGE * sizeof(char));
   char* payload = malloc(MAX_PAYLOAD * sizeof(char));
-  if (ex == 0) {
+  if (status == 0) {
     strcpy(*msg, "MSG");
   }
-  else if (ex == 1) {
+  else if (status == 1) {
     strcpy(*msg, "IMG");
   }
   else {
@@ -258,7 +278,7 @@ int prepareMsg(char** msg, int* hello) {
   strcat(payload, ": ");
 
   int len;
-  if (ex == 1) {
+  if (status == 1) {
     len = MSG_SUBHEADER_SIZE + strlen(nick) + MSG_IMG_SIZE;
     char* payload_img_p = payload + MSG_SUBHEADER_SIZE + strlen(nick);
     memcpy(payload_img_p, text, len);
@@ -285,7 +305,7 @@ int prepareMsg(char** msg, int* hello) {
     strcat(*msg, "0");
   }
   strcat(*msg, msgLen);
-  if (ex == 1) {
+  if (status == 1) {
     memcpy(*msg + MSG_HEADER_SIZE, payload, MSG_SUBHEADER_SIZE + strlen(nick) + MSG_IMG_SIZE);
   } 
   else {
@@ -293,7 +313,7 @@ int prepareMsg(char** msg, int* hello) {
   }
   free(payload);
   free(text);
-  return ex;
+  return status;
 }
 
 
