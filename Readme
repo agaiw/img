@@ -23,7 +23,7 @@ Chat protocol description
 
 MESSAGE (up to 20000 chars) = HEADER (8 chars) + PAYLOAD (up to 19992 chars)
 
-HEADER (8 chars) = MESSAGE TYPE (3 chars) + MESSAGE LENGTH (5 chars)
+HEADER (8 chars) = TYPE (3 chars) + LENGTH (5 chars)
 
 
 Supported header types
