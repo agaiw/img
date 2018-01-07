@@ -2,7 +2,7 @@
 #define _IMAGE_H_
 
 #define MSG_LIMIT 1000
-#define INPUT_FILE "bmps/cat.bmp"
+#define NO_OF_FILES 18
 
 /**
 * Structure:   bitmapS

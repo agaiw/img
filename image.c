@@ -4,25 +4,24 @@
 #include <string.h>
 #include "image.h"
 
-char* bmps[18] = {"bmps/bike.bmp",
-                 "bmps/bird.bmp",
-                 "bmps/butterfly.bmp",
-                 "bmps/car.bmp",
-                 "bmps/cat.bmp",
-                 "bmps/cows.bmp",
-                 "bmps/dog.bmp",
-                 "bmps/fish.bmp",
-                 "bmps/flowers.bmp",
-                 "bmps/food.bmp",
-                 "bmps/friends.bmp",
-                 "bmps/fundog.bmp",
-                 "bmps/guineapig.bmp",
-                 "bmps/jellyfish.bmp",
-                 "bmps/monkey.bmp",
-                 "bmps/muppets.bmp",
-                 "bmps/rhino.bmp",
-                 "bmps/turtle.bmp"};
-
+char* bitmps[NO_OF_FILES] = {"bmps/bike.bmp",
+                            "bmps/bird.bmp",
+                            "bmps/butterfly.bmp",
+                            "bmps/car.bmp",
+                            "bmps/cat.bmp",
+                            "bmps/cows.bmp",
+                            "bmps/dog.bmp",
+                            "bmps/fish.bmp",
+                            "bmps/flowers.bmp",
+                            "bmps/food.bmp",
+                            "bmps/friends.bmp",
+                            "bmps/fundog.bmp",
+                            "bmps/guineapig.bmp",
+                            "bmps/jellyfish.bmp",
+                            "bmps/monkey.bmp",
+                            "bmps/muppets.bmp",
+                            "bmps/rhino.bmp",
+                            "bmps/turtle.bmp"};
 
 char* loadFile(char* filename) {
 
@@ -32,15 +31,16 @@ char* loadFile(char* filename) {
   size_t result;
 
   pFile = fopen(filename, "rb");
- 
-  fseek(pFile, 0, SEEK_END);
-  lSize = ftell(pFile);
-  fseek(pFile, 0, SEEK_SET);
-
-  buffer = (char*)malloc(sizeof(char) * lSize);
-  result = fread(buffer, 1, lSize, pFile);
-  fclose(pFile);
-
+  if (pFile != NULL) {
+    fseek(pFile, 0, SEEK_END);
+    lSize = ftell(pFile);
+    fseek(pFile, 0, SEEK_SET);
+    buffer = (char*)malloc(sizeof(char) * lSize);
+    result = fread(buffer, 1, lSize, pFile);
+    if (result != lSize) { buffer = NULL; }
+    fclose(pFile);
+  }
+  else { buffer = NULL; }
   return buffer;
 
 }
@@ -60,7 +60,7 @@ char* encodeMessage(char* in_msg) {
   time_t t;
   srand((unsigned) time(&t));
   int bmp_index = rand() % 18;
-  char* img_buffer = loadFile(bmps[bmp_index]);
+  char* img_buffer = loadFile(bitmps[bmp_index]);
   struct bitmapS b;
   readBitmapProperties(img_buffer, &b);
   char* bmp_p = b.pixelArray_p;
