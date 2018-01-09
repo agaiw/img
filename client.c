@@ -105,7 +105,7 @@ int main(int argc, char* argv[]) {
   printf("Connection established. Make yourself comfortable and start chatting.\n");
   printf("To enter encrypted message, type 'secret'. To quit, just type 'exit'.\n");
 
-  pthread_t* threads = malloc(sizeof(pthread_t) * 2);
+  pthread_t* threads = (pthread_t*)malloc(sizeof(pthread_t) * 2);
 
   if (pthread_create(threads, NULL, receiveLoop, &sock_fd) != 0) {
     perror("pthread_create receiveLoop");
@@ -128,7 +128,7 @@ int main(int argc, char* argv[]) {
 void* receiveLoop(void* fd) {
   int sock_fd = *((int*)fd);
   char header[MSG_HEADER_SIZE];
-  char* payload = malloc(sizeof(char) * MAX_PAYLOAD);
+  char* payload = (char*)malloc(sizeof(char) * MAX_PAYLOAD);
   while (1) {
     int readBytes;
     memset(header, 0, MSG_HEADER_SIZE);
@@ -169,7 +169,7 @@ void* receiveLoop(void* fd) {
       int msgLen = atoi(len);
 
       readBytes = read(sock_fd, payload, msgLen);
-      char* message = malloc(sizeof(char) * MAX_TXT);
+      char* message = (char*)malloc(sizeof(char) * MAX_TXT);
       decodeMessage(message, payload, msgLen - MSG_IMG_SIZE);
       printf("%.*s%s", msgLen - MSG_IMG_SIZE, payload, message);
       free(message);
@@ -250,7 +250,7 @@ void prepareMsg(char** message, msgType* type) {
   /* Step 1: Gathering input from the user
   /*         and generating TEXT part of PAYLOAD */
 
-  char* text = malloc(sizeof(char) * MAX_MESSAGE);
+  char* text = (char*)malloc(sizeof(char) * MAX_MESSAGE);
   if (*type == HELLO_MESSAGE) {
     strcpy(text, "*** User has joined the chat ***\n");
   }
@@ -284,7 +284,7 @@ void prepareMsg(char** message, msgType* type) {
   /* Step 2: Generating SUBHEADER 
   /          and appending it to PAYLOAD */ 
  
-  char* payload = malloc(MAX_PAYLOAD * sizeof(char));
+  char* payload = (char*)malloc(MAX_PAYLOAD * sizeof(char));
   time_t ct;
   time(&ct);
   payload[0] = '\0';
@@ -311,7 +311,7 @@ void prepareMsg(char** message, msgType* type) {
   /* Step 4: Generating MESSAGE buffer
   /          and appending HEADER (= TYPE + LENGTH) to it */
 
-  *message = malloc(MAX_MESSAGE * sizeof(char));
+  *message = (char*)malloc(MAX_MESSAGE * sizeof(char));
   switch (*type) {
     case HELLO_MESSAGE:  //passthrough
     case TEXT_MESSAGE:
