@@ -10,7 +10,6 @@
 * Description: Holds basic bitmap properties
 *
 **/
-
 struct bitmapS {
   int bmpHeight;
   int bmpWidth;
@@ -18,7 +17,6 @@ struct bitmapS {
   int bitsPerPixel;
   char* pixelArray_p;
   char* file_p;
-
 } bitmapS;
 
 /**
@@ -32,7 +30,6 @@ struct bitmapS {
 * Returns:     Pointer to buffer allocated on heap.
 *              Caller is responsible to free the memory      
 **/
-
 char* loadFile(char* filename);
 
 /**

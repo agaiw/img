@@ -10,10 +10,10 @@ void loadFileTest();
 void bitmapReadTest();
 
 int main() {
-  // Test Suite 1: Image encoding/decoding
   messageEncodeTest();
   loadFileTest();
   bitmapReadTest();
+  printf("All tests successfully passed.\n");
 }
 
 void messageEncodeTest() {

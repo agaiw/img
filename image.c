@@ -5,26 +5,25 @@
 #include "image.h"
 
 char* bitmps[NO_OF_FILES] = {"bmps/bike.bmp",
-                            "bmps/bird.bmp",
-                            "bmps/butterfly.bmp",
-                            "bmps/car.bmp",
-                            "bmps/cat.bmp",
-                            "bmps/cows.bmp",
-                            "bmps/dog.bmp",
-                            "bmps/fish.bmp",
-                            "bmps/flowers.bmp",
-                            "bmps/food.bmp",
-                            "bmps/friends.bmp",
-                            "bmps/fundog.bmp",
-                            "bmps/guineapig.bmp",
-                            "bmps/jellyfish.bmp",
-                            "bmps/monkey.bmp",
-                            "bmps/muppets.bmp",
-                            "bmps/rhino.bmp",
-                            "bmps/turtle.bmp"};
+                             "bmps/bird.bmp",
+                             "bmps/butterfly.bmp",
+                             "bmps/car.bmp",
+                             "bmps/cat.bmp",
+                             "bmps/cows.bmp",
+                             "bmps/dog.bmp",
+                             "bmps/fish.bmp",
+                             "bmps/flowers.bmp",
+                             "bmps/food.bmp",
+                             "bmps/friends.bmp",
+                             "bmps/fundog.bmp",
+                             "bmps/guineapig.bmp",
+                             "bmps/jellyfish.bmp",
+                             "bmps/monkey.bmp",
+                             "bmps/muppets.bmp",
+                             "bmps/rhino.bmp",
+                             "bmps/turtle.bmp"};
 
 char* loadFile(char* filename) {
-
   FILE* pFile;
   long lSize;
   char* buffer;
@@ -42,7 +41,6 @@ char* loadFile(char* filename) {
   }
   else { buffer = NULL; }
   return buffer;
-
 }
 
 void readBitmapProperties(char* buffer, struct bitmapS* bitmap) {
@@ -53,13 +51,12 @@ void readBitmapProperties(char* buffer, struct bitmapS* bitmap) {
   short bitsPerPixel = *((short*)(buffer + 28));
   bitmap->bitsPerPixel = bitsPerPixel;
   bitmap->bmpRowSize = ((int)((bitsPerPixel * bitmap->bmpWidth + 31) / 32)) * 4;
-
 }
 
 char* encodeMessage(char* in_msg) {
   time_t t;
   srand((unsigned) time(&t));
-  int bmp_index = rand() % 18;
+  int bmp_index = rand() % NO_OF_FILES;
   char* img_buffer = loadFile(bitmps[bmp_index]);
   struct bitmapS b;
   readBitmapProperties(img_buffer, &b);
@@ -92,6 +89,5 @@ void decodeMessage(char* out_msg, char* payload, int offset) {
     out_msg[counter] = character;
     if (character == 0) { break; }
   ++counter;
-  };
-
+  }
 }

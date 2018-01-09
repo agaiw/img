@@ -12,10 +12,12 @@
 #include "protocol.h"
 
 #define MSG_MAX_NICK 16
+#define MSG_LENGTH_SIZE 6
 #define MSG_TIME_SIZE 24
 #define MSG_IMG_SIZE 18486
 #define MSG_SUBHEADER_SIZE 27
 #define MAX_SECRET_TXT (MAX_TXT - 17)
+
 
 typedef enum {
   TEXT_MESSAGE = 0,
@@ -155,14 +157,14 @@ void* receiveLoop(void* fd) {
       }
     }
     else if (strncmp(header, "MSG", MSG_TYPE_SIZE) == 0 || strncmp(header, "EXT", MSG_TYPE_SIZE) == 0) {
-      char len[6];
+      char len[MSG_LENGTH_SIZE];
       strncpy(len, header + MSG_TYPE_SIZE, MSG_LEN_SIZE);
       int msgLen = atoi(len);
       readBytes = read(sock_fd, payload, msgLen);
       printf("%s\n", payload);
     }
     else if (strncmp(header, "IMG", MSG_TYPE_SIZE) == 0) {
-      char len[6];
+      char len[MSG_LENGTH_SIZE];
       strncpy(len, header + MSG_TYPE_SIZE, MSG_LEN_SIZE);
       int msgLen = atoi(len);
 
@@ -243,7 +245,7 @@ void prepareMsg(char** message, msgType* type) {
   |  +--------------------------+  +----------------------+ |
   +---------------------------------------------------------+
 
-*/
+  */
 
   /* Step 1: Gathering input from the user
   /*         and generating TEXT part of PAYLOAD */
@@ -279,7 +281,6 @@ void prepareMsg(char** message, msgType* type) {
     else { *type = TEXT_MESSAGE; }
   }
 
-
   /* Step 2: Generating SUBHEADER 
   /          and appending it to PAYLOAD */ 
  
@@ -293,6 +294,7 @@ void prepareMsg(char** message, msgType* type) {
   strcat(payload, ": ");
 
   /* Step 3: Appending TEXT to PAYLOAD */ 
+
   int length;
   if (*type == IMAGE_MESSAGE) {
     length = MSG_SUBHEADER_SIZE + strlen(nick) + MSG_IMG_SIZE;
@@ -323,7 +325,7 @@ void prepareMsg(char** message, msgType* type) {
       break;
   }
 
-  char msgLen[6];
+  char msgLen[MSG_LENGTH_SIZE];
   sprintf(msgLen, "%d", length);
   if (length < 10) {
     strcat(*message, "0000");

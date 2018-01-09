@@ -18,7 +18,7 @@ int makeSocket(int port) {
   // Create server socket
   if ((sock_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
     perror("Failed to create socket.");
-  };
+  }
 
  // Bind socket to port
   if (bind(sock_fd, (struct sockaddr*)&server, sizeof(server)) < 0) {
