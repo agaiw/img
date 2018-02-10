@@ -16,8 +16,6 @@
 #define MSG_TIME_SIZE 24
 #define MSG_IMG_SIZE 18486
 #define MSG_SUBHEADER_SIZE 27
-#define MAX_SECRET_TXT (MAX_TXT - 17)
-
 
 typedef enum {
   TEXT_MESSAGE = 0,
@@ -103,6 +101,7 @@ int main(int argc, char* argv[]) {
     exit(EXIT_FAILURE);
   }
   printf("Connection established. Make yourself comfortable and start chatting.\n");
+  printf("Max message limit: 600 characters.\n");
   printf("To enter encrypted message, type 'secret'. To quit, just type 'exit'.\n");
 
   pthread_t* threads = (pthread_t*)malloc(sizeof(pthread_t) * 2);
@@ -169,7 +168,7 @@ void* receiveLoop(void* fd) {
       int msgLen = atoi(len);
 
       readBytes = read(sock_fd, payload, msgLen);
-      char* message = (char*)malloc(sizeof(char) * MAX_TXT);
+      char* message = (char*)malloc(sizeof(char) * MAX_TXT_GROSS);
       decodeMessage(message, payload, msgLen - MSG_IMG_SIZE);
       printf("%.*s%s", msgLen - MSG_IMG_SIZE, payload, message);
       free(message);
@@ -255,7 +254,7 @@ void prepareMsg(char** message, msgType* type) {
     strcpy(text, "*** User has joined the chat ***\n");
   }
   else {
-    fgets(text, MAX_TXT - 1, stdin);
+    fgets(text, MAX_TXT, stdin);
 
     // erase just printed message after writing it to 'text' buffer
     printf("\33[1A\33[2K");
@@ -266,11 +265,11 @@ void prepareMsg(char** message, msgType* type) {
 
     else if (strcmp(text, "secret\n") == 0) {
       *type = IMAGE_MESSAGE;
-      printf("Please enter a message to encrypt.\n");
+      printf("Please enter a message to encrypt. \n");
       strcpy(text, "SECRET MESSAGE: ");
-      char secret_text[MAX_SECRET_TXT];
-      fgets(secret_text, MAX_SECRET_TXT, stdin);
-      strncat(text, secret_text, MAX_SECRET_TXT);
+      char secret_text[MAX_TXT];
+      fgets(secret_text, MAX_TXT, stdin);
+      strncat(text, secret_text, MAX_TXT);
       char* img_buffer = encodeMessage(text);
       *text = '\0';
       memcpy(text, img_buffer, MSG_IMG_SIZE);
