@@ -4,24 +4,24 @@
 #include <string.h>
 #include "image.h"
 
-char* bitmps[NO_OF_FILES] = {"bmps/bike.bmp",
-                             "bmps/bird.bmp",
-                             "bmps/butterfly.bmp",
-                             "bmps/car.bmp",
-                             "bmps/cat.bmp",
-                             "bmps/cows.bmp",
-                             "bmps/dog.bmp",
-                             "bmps/fish.bmp",
-                             "bmps/flowers.bmp",
-                             "bmps/food.bmp",
-                             "bmps/friends.bmp",
-                             "bmps/fundog.bmp",
-                             "bmps/guineapig.bmp",
-                             "bmps/jellyfish.bmp",
-                             "bmps/monkey.bmp",
-                             "bmps/muppets.bmp",
-                             "bmps/rhino.bmp",
-                             "bmps/turtle.bmp"};
+char* bitmps[] = {"bmps/bike.bmp",
+                  "bmps/bird.bmp",
+                  "bmps/butterfly.bmp",
+                  "bmps/car.bmp",
+                  "bmps/cat.bmp",
+                  "bmps/cows.bmp",
+                  "bmps/dog.bmp",
+                  "bmps/fish.bmp",
+                  "bmps/flowers.bmp",
+                  "bmps/food.bmp",
+                  "bmps/friends.bmp",
+                  "bmps/fundog.bmp",
+                  "bmps/guineapig.bmp",
+                  "bmps/jellyfish.bmp",
+                  "bmps/monkey.bmp",
+                  "bmps/muppets.bmp",
+                  "bmps/rhino.bmp",
+                  "bmps/turtle.bmp"};
 
 char* loadFile(char* filename) {
   FILE* pFile;

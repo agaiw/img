@@ -26,12 +26,12 @@ int connectedClients[MAX_CLIENTS];
 int main(int argc, char* argv[]) {
   memset(connectedClients, 0, sizeof(connectedClients));
   if (argc < 2) {
-    printf("Please provide port number.\n");
+    printf("Please provide port number (range: 1024 - 49151).\n");
     exit(EXIT_SUCCESS);
   }
   int port = strtol(argv[1], NULL, 10);
   if (port < MIN_PORT || port > MAX_PORT) {
-    printf("Please provide valid port number. Example usage:\n ");
+    printf("Please provide valid port number (range: 1024 - 49151). Example usage:\n ");
     printf("./server 5100\n");
     exit(EXIT_SUCCESS);
   }
