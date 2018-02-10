@@ -101,7 +101,7 @@ int main(int argc, char* argv[]) {
     exit(EXIT_FAILURE);
   }
   printf("Connection established. Make yourself comfortable and start chatting.\n");
-  printf("Max message limit: 600 characters.\n");
+  printf("Max message length: 600 characters.\n");
   printf("To enter encrypted message, type 'secret'. To quit, just type 'exit'.\n");
 
   pthread_t* threads = (pthread_t*)malloc(sizeof(pthread_t) * 2);
